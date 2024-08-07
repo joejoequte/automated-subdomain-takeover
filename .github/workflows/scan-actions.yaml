@@ -1,4 +1,4 @@
-name: scan-actions
+name: 扫描操作
 
 on:
   workflow_dispatch:
@@ -8,28 +8,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # 检出代码库
-      - name: Checkout Repo
+      - name: 检出代码库
         uses: actions/checkout@v2
 
-      # 设置Go环境，使用Go 1.21
+      # 设置Go环境，使用Go 1.22
       - name: 设置 Go 环境
         uses: actions/setup-go@v2
         with:
-          go-version: '1.21'
+          go-version: '1.22'
      
       # 初始化Go模块
       - name: 初始化Go模块
         run: go mod init joejoequte/automated-subdomain-takeover
 
       # 缓存Go依赖
-      - name: Cache Go
+      - name: 缓存 Go 依赖
+        id: cache-go-deps
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            /go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      # 缓存 Go 环境
+      - name: 缓存 Go 环境
         id: cache-go
         uses: actions/cache@v2
         with:
           path: /home/runner/go
           key: ${{ runner.os }}-go
 
-      # 安装和更新Go工具
+      # 安装和更新 Go 工具
       - name: 安装和更新 Go 工具
         if: steps.cache-go.outputs.cache-hit != 'true'
         run: |
@@ -46,14 +58,14 @@ jobs:
           go get -u github.com/projectdiscovery/nuclei/v2/cmd/nuclei
 
       # 运行扫描器
-      - name: Running Scanner
+      - name: 运行扫描器
         run: |
           nuclei -update-templates
           subfinder -silent -dL input/domains.txt -config config/subfinder-config.yaml | anew output/passive_subdomains.txt | httpx -silent | anew output/active_urls.txt | nuclei -silent -t takeovers/ | anew output/nuclei_output.txt
         shell: bash
 
       # 运行扫描器的另一个版本
-      - name: 运行扫描器
+      - name: 运行扫描器的另一个版本
         run: |
           go run github.com/projectdiscovery/subfinder/v2/cmd/subfinder -silent -dL input/domains.txt -config config/subfinder-config.yaml | go run github.com/projectdiscovery/httpx/cmd/httpx -silent | go run github.com/projectdiscovery/nuclei/v2/cmd/nuclei -silent -t takeovers/ | anew output/nuclei_output.txt
 
@@ -61,31 +73,31 @@ jobs:
       - name: 显示漏洞
         run: |
           cat output/nuclei_output.txt | while read -r line; do
-            echo "::warning::Vulnerability Found: $line"  # 使用::warning::注释显示漏洞
+            echo "::warning::发现漏洞: $line"  # 使用::warning::注释显示漏洞
           done
 
       # 排序输出结果
-      - name: Sorting the output results
+      - name: 排序输出结果
         run: |
           find output -type f -exec sort {} -o {} \;
         shell: bash
 
       # 创建本地更改
-      - name: Create local changes
+      - name: 创建本地更改
         run: |
           git add output/passive_subdomains.txt
           git add output/active_urls.txt
           git add output/nuclei_output.txt
 
       # 提交结果到Github
-      - name: Commit results to Github
+      - name: 提交结果到Github
         run: |
           git config --local user.email "j.oejoequte@gmail.com"
           git config --global user.name "joejoequte"
-          git commit -m "Scan-Actions report" -a --allow-empty
+          git commit -m "扫描操作报告" -a --allow-empty
 
       # 推送更改
-      - name: Push changes
+      - name: 推送更改
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GIT_TOKEN }}
