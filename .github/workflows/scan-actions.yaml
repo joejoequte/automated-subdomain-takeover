@@ -9,11 +9,11 @@ jobs:
     steps:
       # 检出代码库
       - name: 检出代码库
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3  # 更新到最新版本
 
       # 设置 Go 环境，使用 Go 1.22
       - name: 设置 Go 环境
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3  # 更新到最新版本
         with:
           go-version: '1.22'
 
@@ -32,7 +32,7 @@ jobs:
       # 缓存 Go 依赖
       - name: 缓存 Go 依赖
         id: cache-go-deps
-        uses: actions/cache@v2
+        uses: actions/cache@v3  # 更新到最新版本
         with:
           path: |
             ~/.cache/go-build
@@ -48,10 +48,9 @@ jobs:
           go get -u github.com/projectdiscovery/httpx/cmd/httpx
           go get -u github.com/projectdiscovery/nuclei/v2/cmd/nuclei
 
-      # 确保工具在路径中
-      - name: 确保工具在路径中
-        run: |
-          echo "::add-path::$(go env GOPATH)/bin"
+      # 将 Go 工具路径添加到环境变量
+      - name: 更新 PATH 环境变量
+        run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
       # 运行扫描器
       - name: 运行扫描器
