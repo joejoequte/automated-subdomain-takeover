@@ -11,17 +11,17 @@ jobs:
       - name: 检出代码库
         uses: actions/checkout@v2
 
-      # 设置Go环境，使用Go 1.22
+      # 设置 Go 环境，使用 Go 1.21
       - name: 设置 Go 环境
         uses: actions/setup-go@v2
         with:
           go-version: '1.22'
-     
-      # 初始化Go模块
-      - name: 初始化Go模块
+
+      # 初始化 Go 模块
+      - name: 初始化 Go 模块
         run: go mod init joejoequte/automated-subdomain-takeover
 
-      # 缓存Go依赖
+      # 缓存 Go 依赖
       - name: 缓存 Go 依赖
         id: cache-go-deps
         uses: actions/cache@v2
@@ -33,25 +33,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      # 缓存 Go 环境
-      - name: 缓存 Go 环境
-        id: cache-go
-        uses: actions/cache@v2
-        with:
-          path: /home/runner/go
-          key: ${{ runner.os }}-go
-
       # 安装和更新 Go 工具
       - name: 安装和更新 Go 工具
-        if: steps.cache-go.outputs.cache-hit != 'true'
+        if: steps.cache-go-deps.outputs.cache-hit != 'true'
         run: |
           go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
           go install github.com/projectdiscovery/httpx/cmd/httpx@latest
           go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
           go install github.com/tomnomnom/anew@latest
 
-      # 安装所需的Go模块
-      - name: 安装所需的Go模块
+      # 安装所需的 Go 模块
+      - name: 安装所需的 Go 模块
         run: |
           go get -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
           go get -u github.com/projectdiscovery/httpx/cmd/httpx
@@ -89,8 +81,8 @@ jobs:
           git add output/active_urls.txt
           git add output/nuclei_output.txt
 
-      # 提交结果到Github
-      - name: 提交结果到Github
+      # 提交结果到 Github
+      - name: 提交结果到 Github
         run: |
           git config --local user.email "j.oejoequte@gmail.com"
           git config --global user.name "joejoequte"
