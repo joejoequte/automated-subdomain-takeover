@@ -7,17 +7,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # 检出代码库
       - name: Checkout Repo
         uses: actions/checkout@v2
 
+      # 设置Go环境，使用Go 1.21
       - name: 设置 Go 环境
         uses: actions/setup-go@v2
         with:
-         go-version: '1.20'
+          go-version: '1.21'
      
+      # 初始化Go模块
       - name: 初始化Go模块
         run: go mod init joejoequte/automated-subdomain-takeover
 
+      # 缓存Go依赖
       - name: Cache Go
         id: cache-go
         uses: actions/cache@v2
@@ -25,13 +29,7 @@ jobs:
           path: /home/runner/go
           key: ${{ runner.os }}-go
 
-    #  - name: 缓存 Go 依赖
-    #    id: cache-go
-    #    uses: actions/cache@v2
-    #    with:
-     #     path: ${{ env.GOPATH }}/pkg/mod
-      #    key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          
+      # 安装和更新Go工具
       - name: 安装和更新 Go 工具
         if: steps.cache-go.outputs.cache-hit != 'true'
         run: |
@@ -40,46 +38,53 @@ jobs:
           go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
           go install github.com/tomnomnom/anew@latest
 
+      # 安装所需的Go模块
       - name: 安装所需的Go模块
         run: |
-           go get -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
-           go get -u github.com/projectdiscovery/httpx/cmd/httpx
-           go get -u github.com/projectdiscovery/nuclei/v2/cmd/nuclei
-   
+          go get -u github.com/projectdiscovery/subfinder/v2/cmd/subfinder
+          go get -u github.com/projectdiscovery/httpx/cmd/httpx
+          go get -u github.com/projectdiscovery/nuclei/v2/cmd/nuclei
 
+      # 运行扫描器
       - name: Running Scanner
         run: |
           nuclei -update-templates
           subfinder -silent -dL input/domains.txt -config config/subfinder-config.yaml | anew output/passive_subdomains.txt | httpx -silent | anew output/active_urls.txt | nuclei -silent -t takeovers/ | anew output/nuclei_output.txt
         shell: bash
 
+      # 运行扫描器的另一个版本
       - name: 运行扫描器
         run: |
           go run github.com/projectdiscovery/subfinder/v2/cmd/subfinder -silent -dL input/domains.txt -config config/subfinder-config.yaml | go run github.com/projectdiscovery/httpx/cmd/httpx -silent | go run github.com/projectdiscovery/nuclei/v2/cmd/nuclei -silent -t takeovers/ | anew output/nuclei_output.txt
-      
+
+      # 显示漏洞
       - name: 显示漏洞
         run: |
           cat output/nuclei_output.txt | while read -r line; do
             echo "::warning::Vulnerability Found: $line"  # 使用::warning::注释显示漏洞
           done
-      
+
+      # 排序输出结果
       - name: Sorting the output results
         run: |
           find output -type f -exec sort {} -o {} \;
         shell: bash
 
+      # 创建本地更改
       - name: Create local changes
         run: |
           git add output/passive_subdomains.txt
           git add output/active_urls.txt
           git add output/nuclei_output.txt
 
+      # 提交结果到Github
       - name: Commit results to Github
         run: |
           git config --local user.email "j.oejoequte@gmail.com"
           git config --global user.name "joejoequte"
           git commit -m "Scan-Actions report" -a --allow-empty
 
+      # 推送更改
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
